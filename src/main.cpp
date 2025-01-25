@@ -156,29 +156,50 @@ void checkWiFiConnection() {
 void receiveDataFromArduino(String dataReceived, int source) {
     const int maxUnoValues  = 13;
     const int maxNanoValues = 6;
-    float values[13]    = {0};
-    int index           = 0;
-
-    // Split the data by comma and store it in the values array
-    int startIndex = 0, commaIndex;
-    while ((commaIndex = dataReceived.indexOf(',', startIndex)) != -1 && index < maxUnoValues) {
-        values[index++] = dataReceived.substring(startIndex, commaIndex).toFloat();
-        startIndex = commaIndex + 1;
-    }
-    // Capture the last value if there's remaining data
-    if (startIndex < dataReceived.length() && index < maxUnoValues) {
-        values[index++] = dataReceived.substring(startIndex).toFloat();
-    }
 
     // Process data based on the source
-    if (source == 1 && index == maxUnoValues) { // Data from Arduino Uno
-        memcpy(phValues, values, sizeof(float) * 11); // Copy pH values
-        cm_1 = values[11];
-        cm_2 = values[12];
-    } else if (source == 2 && index == maxNanoValues) { // Data from Arduino Nano
-        memcpy(gasValues, values, sizeof(float) * 2);          // Copy gas values
-        memcpy(pressureValues, values + 2, sizeof(float) * 2); // Copy pressure values
-        memcpy(temperatureValues, values + 4, sizeof(float) * 2); // Copy temperature values
+    if (source == 1) { // Data from Arduino Uno
+        float values[13] = {0};
+        int index = 0;
+
+        // Split the data by comma and store it in the values array
+        int startIndex = 0, commaIndex;
+        while ((commaIndex = dataReceived.indexOf(',', startIndex)) != -1 && index < maxUnoValues) {
+            values[index++] = dataReceived.substring(startIndex, commaIndex).toFloat();
+            startIndex = commaIndex + 1;
+        }
+        // Capture the last value if there's remaining data
+        if (startIndex < dataReceived.length() && index < maxUnoValues) {
+            values[index++] = dataReceived.substring(startIndex).toFloat();
+        }
+
+        if (index == maxUnoValues) {
+            memcpy(phValues, values, sizeof(float) * 11); // Copy pH values
+            cm_1 = values[11];  // cm_1 from index 11
+            cm_2 = values[12];  // cm_2 from index 12
+        }
+
+    } else if (source == 2) { // Data from Arduino Nano
+        float values[6] = {0};
+        int index = 0;
+
+        // Split the data by comma and store it in the values array
+        int commaIndex;
+        while ((commaIndex = dataReceived.indexOf(',')) != -1 && index < maxNanoValues) {
+            values[index++] = dataReceived.substring(0, commaIndex).toFloat();
+            dataReceived.remove(0, commaIndex + 1);
+        }
+        // Capture the last value if there's remaining data
+        if (index < maxNanoValues && dataReceived.length() > 0) {
+            values[index++] = dataReceived.toFloat();
+        }
+
+        if (index == maxNanoValues) {
+            // Split into respective arrays for gas, pressure, and temperature values
+            memcpy(gasValues, values, sizeof(float) * 2);           // Copy gas values
+            memcpy(pressureValues, values + 2, sizeof(float) * 2);  // Copy pressure values
+            memcpy(temperatureValues, values + 4, sizeof(float) * 2); // Copy temperature values
+        }
     }
 }
 
